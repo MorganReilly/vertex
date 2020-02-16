@@ -1,7 +1,14 @@
+/* 
+== VERTEX DATABASE ==
+AUTHOR: MORGAN REILLY -- G00303598
+*/
+
+/* -- CREATE DATABASE -- */
 DROP DATABASE IF EXISTS vertex_db;
 create database vertex_db default CHARACTER SET = utf8 default COLLATE = utf8_general_ci;
 use vertex_db;
 
+/* -- USER SCHEMA -- */
 CREATE TABLE user
 (
     user_id INTEGER(4) unsigned NOT NULL auto_increment,
@@ -13,6 +20,30 @@ CREATE TABLE user
     UNIQUE KEY (user_name)
 ) ENGINE = INNODB;
 
+/* Insert into user */
+insert into user(user_name, password, display_name)
+    values ('mreilly', 'foo1bar2', 'mreilly');
+insert into user(user_name, password, display_name)
+    values ('cbutler', 'foo1bar2', 'cbutler');
+insert into user(user_name, password, display_name)
+    values ('dneilan', 'foo1bar2', 'dneilan');
+select * from user;
+
+/* Referential Integritiy -- Insertion Testing */
+insert into user(user_name, password, display_name)
+    values ('mreilly', 'foo1bar2', 'mreilly');
+select * from user;
+
+/* Referential Integrity -- Deletion Testing */
+delete from user where user_id = 1;
+select * from user;
+
+/* Re-insert User */
+insert into user(user_name, password, display_name)
+    values ('mreilly', 'foo1bar2', 'mreilly');
+select * from user;
+
+/* -- CHANNEL SCHEMA -- */
 CREATE TABLE channel
 (
     channel_id INTEGER(4) unsigned NOT NULL auto_increment,
@@ -23,8 +54,33 @@ CREATE TABLE channel
     channel_position INTEGER(4) NOT NULL,
 
     PRIMARY KEY(channel_id),
-    FOREIGN KEY(user_id) REFERENCES user(user_id)
+    UNIQUE KEY (channel_name, user_id),
+    FOREIGN KEY(user_id) REFERENCES user(user_id) ON DELETE CASCADE
 ) ENGINE = INNODB;
+
+insert into channel(channel_name, user_id, channel_capacity, channel_type, channel_position)
+    values ('Development', 0001, 20, 'TEXT', 1);
+insert into channel(channel_name, user_id, channel_capacity, channel_type, channel_position)
+    values ('Development', 0002, 20, 'TEXT', 1);
+insert into channel(channel_name, user_id, channel_capacity, channel_type, channel_position)
+    values ('Development', 3, 20, 'TEXT', 1);
+select * from user;
+select * from channel;
+
+/* 
+Referential Integritiy -- Insertion Testing
+Duplicate Entry Check: (channel_name, user_id)
+ */
+insert into channel(channel_name, user_id, channel_capacity, channel_type, channel_position)
+    values ('Development', 0001, 20, 'TEXT', 2);
+
+select * from user;
+select * from channel;
+
+delete from channel where channel_id = 2;
+
+select * from user;
+select * from channel;
 
 CREATE TABLE message
 (
@@ -37,7 +93,8 @@ CREATE TABLE message
 
     PRIMARY KEY(message_id),
     FOREIGN KEY(channel_id) REFERENCES channel(channel_id),
-    FOREIGN KEY(user_id) REFERENCES user(user_id)
+    CONSTRAINT user_id
+        FOREIGN KEY(user_id) REFERENCES user(user_id) ON DELETE CASCADE
 ) ENGINE = INNODB;
 
 CREATE TABLE attatchment
