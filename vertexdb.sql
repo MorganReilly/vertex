@@ -9,6 +9,7 @@ create database vertex_db default CHARACTER SET = utf8 default COLLATE = utf8_ge
 use vertex_db;
 
 /* -- USER SCHEMA -- */
+-- 1:M with Channel
 CREATE TABLE user
 (
     user_id INTEGER(4) unsigned NOT NULL auto_increment,
@@ -20,7 +21,7 @@ CREATE TABLE user
     UNIQUE KEY (user_name)
 ) ENGINE = INNODB;
 
-/* Insert into user */
+-- Inserts
 insert into user(user_name, password, display_name)
     values ('mreilly', 'foo1bar2', 'mreilly');
 insert into user(user_name, password, display_name)
@@ -29,21 +30,27 @@ insert into user(user_name, password, display_name)
     values ('dneilan', 'foo1bar2', 'dneilan');
 select * from user;
 
-/* Referential Integritiy -- Insertion Testing */
+-- Insert User: Deplicate User check --> Should fail
 insert into user(user_name, password, display_name)
     values ('mreilly', 'foo1bar2', 'mreilly');
 select * from user;
 
-/* Referential Integrity -- Deletion Testing */
+-- Delete User
 delete from user where user_id = 1;
 select * from user;
 
-/* Re-insert User */
+-- Re-insert User
 insert into user(user_name, password, display_name)
     values ('mreilly', 'foo1bar2', 'mreilly');
 select * from user;
 
+-- Update User
+update user set user_id = 1 where user_name = 'mreilly';
+select * from user;
+
 /* -- CHANNEL SCHEMA -- */
+-- M:1 Relationship with User
+-- 1:M Relationship with Message
 CREATE TABLE channel
 (
     channel_id INTEGER(4) unsigned NOT NULL auto_increment,
@@ -54,49 +61,126 @@ CREATE TABLE channel
     channel_position INTEGER(4) NOT NULL,
 
     PRIMARY KEY(channel_id),
-    UNIQUE KEY (channel_name, user_id),
-    FOREIGN KEY(user_id) REFERENCES user(user_id) ON DELETE CASCADE
+    UNIQUE KEY (channel_name, user_id, channel_type), -- avoid duplicate entries
+    FOREIGN KEY(user_id) REFERENCES user(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = INNODB;
 
+-- Insertions
 insert into channel(channel_name, user_id, channel_capacity, channel_type, channel_position)
-    values ('Development', 0001, 20, 'TEXT', 1);
+    values ('Development', 1, 20, 'TEXT', 1);
 insert into channel(channel_name, user_id, channel_capacity, channel_type, channel_position)
-    values ('Development', 0002, 20, 'TEXT', 1);
+    values ('Development', 2, 20, 'TEXT', 1);
 insert into channel(channel_name, user_id, channel_capacity, channel_type, channel_position)
     values ('Development', 3, 20, 'TEXT', 1);
 select * from user;
 select * from channel;
 
-/* 
-Referential Integritiy -- Insertion Testing
-Duplicate Entry Check: (channel_name, user_id)
- */
+-- Inserts: Check for duplicate user entries in channel
 insert into channel(channel_name, user_id, channel_capacity, channel_type, channel_position)
-    values ('Development', 0001, 20, 'TEXT', 2);
+    values ('Development', 1, 20, 'TEXT', 2);
+select * from channel;
 
+-- Inserts: Verify new entry works with existing user
+insert into channel(channel_name, user_id, channel_capacity, channel_type, channel_position)
+    values ('Gaming', 1, 20, 'VOICE', 1);
+select * from channel;
+
+-- Inserts: Verify new entry works with existing user, channel, but new type
+insert into channel(channel_name, user_id, channel_capacity, channel_type, channel_position)
+    values ('Development', 1, 20, 'VOICE', 1);
+select * from channel;
+
+-- View tables
 select * from user;
 select * from channel;
 
-delete from channel where channel_id = 2;
+-- Deletes
+delete from channel where channel_id = 1;
+select * from channel;
 
+-- Re-insert channel
+insert into channel(channel_name, user_id, channel_capacity, channel_type, channel_position)
+    values ('Development', 1, 20, 'TEXT', 2);
+select * from channel;
+
+-- Update newly inserted channel
+update channel set channel_id = 1 where channel_id = 7;
+select * from channel;
+
+-- Delete User
+delete from user where user_id = 1;
 select * from user;
 select * from channel;
 
+-- Re-insert User
+insert into user(user_name, password, display_name)
+    values ('mreilly', 'foo1bar2', 'mreilly');
+select * from user;
+select * from channel;
+
+-- Update User
+update user set user_id = 1 where user_name = 'mreilly';
+select * from user;
+select * from channel;
+
+-- View tables
+select * from user;
+select * from channel;
+
+/* -- MESSAGE SCHEMA -- */
+-- M:1 Relationship with Channel
+-- 1:1 Relationship with Attatchment
+-- drop table if EXISTS message;
 CREATE TABLE message
 (
     message_id INTEGER(4) unsigned NOT NULL auto_increment,
     channel_id INTEGER(4) unsigned NOT NULL,
     user_id INTEGER(4) unsigned NOT NULL,
     message_content VARCHAR(255) NOT NULL,
-    message_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    message_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     edited_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY(message_id),
-    FOREIGN KEY(channel_id) REFERENCES channel(channel_id),
-    CONSTRAINT user_id
-        FOREIGN KEY(user_id) REFERENCES user(user_id) ON DELETE CASCADE
+    FOREIGN KEY(channel_id) REFERENCES channel(channel_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES channel(user_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = INNODB;
 
+-- Inserts
+insert into message(channel_id, user_id, message_content) 
+    values (3, 3, 'Hello, world');
+insert into message(channel_id, user_id, message_content) 
+    values (3, 3, 'A second message');
+insert into message(channel_id, user_id, message_content) 
+    values (3, 3, 'A third message');
+select * from message;
+
+-- Deletes
+delete from message where message_id = 1;
+select * from message;
+
+-- Re-insert message
+insert into message(channel_id, user_id, message_content) 
+    values (2, 2, 'Hello, world');
+select * from message;
+
+-- Updates: Update message --updated timestamp should change
+update message set message_content = 'Output to world' where message_id = 4;
+select * from message;
+
+-- Deletes: Remove user 2 --> All messages should be gone with no issues
+delete from user where user_id = 2;
+
+-- Deletes: Remove channel 2 --> All messages should be gone with no issues
+delete from channel where channel_id = 2;
+
+-- View tables
+select * from user;
+select * from channel;
+select * from message;
+
+/* -- ATTATCHMENT SCHEMA -- */
+-- 1:1 Relationship with Message
+drop table if EXISTS attatchment;
 CREATE TABLE attatchment
 (
     attatchment_id INTEGER(4) unsigned NOT NULL auto_increment,
@@ -106,9 +190,39 @@ CREATE TABLE attatchment
     file_url VARCHAR(255) NOT NULL,
 
     PRIMARY KEY (attatchment_id),
-    FOREIGN KEY(message_id) REFERENCES message(message_id)  
+    UNIQUE KEY (message_id),
+    FOREIGN KEY(message_id) REFERENCES message(message_id) ON DELETE RESTRICT ON UPDATE RESTRICT -- forbids Updates and Deletes to PK in parent
 ) ENGINE = INNODB;
 
+-- View tables
+select * from user;
+select * from channel;
+select * from message;
+
+-- Inserts
+insert into attatchment(file_name, message_id, file_size, file_url)
+    values ('Example_file.jpg', 8, 1064, './home/pictures');
+select * from attatchment;
+
+-- Insert should fail --> Duplicate entry
+insert into attatchment(file_name, message_id, file_size, file_url)
+    values ('Example_file2.jpg', 8, 1064, './home/pictures');
+select * from attatchment;
+
+-- Deletes
+delete from attatchment where attatchment_id = 1;
+select * from attatchment;
+
+-- Updates
+update attatchment set file_name = 'updatedFile.png' where attatchment_id = 3;
+#################################################################################################
+/* TRANSACTIONS */
+
+
+
+
+#################################################################################################
+-- Outdated tests -- Still work but above are better 
 /* Create user */
 select * from user;
 insert into user(user_name, password, display_name)
