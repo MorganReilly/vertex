@@ -21,6 +21,61 @@ CREATE TABLE user
     UNIQUE KEY (user_name)
 ) ENGINE = INNODB;
 
+/* -- CHANNEL SCHEMA -- */
+-- M:1 Relationship with User
+-- 1:M Relationship with Message
+CREATE TABLE channel
+(
+    channel_id INTEGER(4) unsigned NOT NULL auto_increment,
+    channel_name VARCHAR(32) NOT NULL,
+    user_id INTEGER(4) unsigned NOT NULL,
+    channel_capacity INTEGER(4) NOT NULL,
+    channel_type ENUM ('TEXT', 'VOICE', 'DM') NOT NULL,
+    channel_position INTEGER(4) NOT NULL,
+
+    PRIMARY KEY(channel_id),
+    UNIQUE KEY (channel_name, user_id, channel_type), -- avoid duplicate entries
+    FOREIGN KEY(user_id) REFERENCES user(user_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = INNODB;
+
+/* -- MESSAGE SCHEMA -- */
+-- M:1 Relationship with Channel
+-- 1:1 Relationship with Attachment
+-- drop table if EXISTS message;
+CREATE TABLE message
+(
+    message_id INTEGER(4) unsigned NOT NULL auto_increment,
+    channel_id INTEGER(4) unsigned NOT NULL,
+    user_id INTEGER(4) unsigned NOT NULL,
+    message_content VARCHAR(255) NOT NULL,
+    message_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    edited_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY(message_id),
+    FOREIGN KEY(channel_id) REFERENCES channel(channel_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES channel(user_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = INNODB;
+
+/* -- ATTACHMENT SCHEMA -- */
+-- 1:1 Relationship with Message
+drop table if EXISTS attachment;
+CREATE TABLE attachment
+(
+    attachment_id INTEGER(4) unsigned NOT NULL auto_increment,
+    file_name VARCHAR(32) NOT NULL,
+    message_id INTEGER(4) unsigned NOT NULL,
+    file_size INTEGER(64) NOT NULL,
+    file_url VARCHAR(255) NOT NULL,
+
+    PRIMARY KEY (attachment_id),
+    UNIQUE KEY (message_id),
+    FOREIGN KEY(message_id) REFERENCES message(message_id) ON DELETE RESTRICT ON UPDATE RESTRICT -- forbids Updates and Deletes to PK in parent
+) ENGINE = INNODB;
+#################################################################################################
+/* REFERENTIAL INTEGRITY */
+-- Some tests on each table to verify it's working
+
+-- USER
 -- Inserts
 insert into user(user_name, password, display_name)
     values ('mreilly', 'foo1bar2', 'mreilly');
@@ -48,23 +103,7 @@ select * from user;
 update user set user_id = 1 where user_name = 'mreilly';
 select * from user;
 
-/* -- CHANNEL SCHEMA -- */
--- M:1 Relationship with User
--- 1:M Relationship with Message
-CREATE TABLE channel
-(
-    channel_id INTEGER(4) unsigned NOT NULL auto_increment,
-    channel_name VARCHAR(32) NOT NULL,
-    user_id INTEGER(4) unsigned NOT NULL,
-    channel_capacity INTEGER(4) NOT NULL,
-    channel_type ENUM ('TEXT', 'VOICE', 'DM') NOT NULL,
-    channel_position INTEGER(4) NOT NULL,
-
-    PRIMARY KEY(channel_id),
-    UNIQUE KEY (channel_name, user_id, channel_type), -- avoid duplicate entries
-    FOREIGN KEY(user_id) REFERENCES user(user_id) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE = INNODB;
-
+-- CHANNEL
 -- Insertions
 insert into channel(channel_name, user_id, channel_capacity, channel_type, channel_position)
     values ('Development', 1, 20, 'TEXT', 1);
@@ -127,24 +166,7 @@ select * from channel;
 select * from user;
 select * from channel;
 
-/* -- MESSAGE SCHEMA -- */
--- M:1 Relationship with Channel
--- 1:1 Relationship with Attatchment
--- drop table if EXISTS message;
-CREATE TABLE message
-(
-    message_id INTEGER(4) unsigned NOT NULL auto_increment,
-    channel_id INTEGER(4) unsigned NOT NULL,
-    user_id INTEGER(4) unsigned NOT NULL,
-    message_content VARCHAR(255) NOT NULL,
-    message_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    edited_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    PRIMARY KEY(message_id),
-    FOREIGN KEY(channel_id) REFERENCES channel(channel_id) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY(user_id) REFERENCES channel(user_id) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE = INNODB;
-
+-- MESSAGE
 -- Inserts
 insert into message(channel_id, user_id, message_content) 
     values (3, 3, 'Hello, world');
@@ -178,47 +200,76 @@ select * from user;
 select * from channel;
 select * from message;
 
-/* -- ATTATCHMENT SCHEMA -- */
--- 1:1 Relationship with Message
-drop table if EXISTS attatchment;
-CREATE TABLE attatchment
-(
-    attatchment_id INTEGER(4) unsigned NOT NULL auto_increment,
-    file_name VARCHAR(32) NOT NULL,
-    message_id INTEGER(4) unsigned NOT NULL,
-    file_size INTEGER(64) NOT NULL,
-    file_url VARCHAR(255) NOT NULL,
-
-    PRIMARY KEY (attatchment_id),
-    UNIQUE KEY (message_id),
-    FOREIGN KEY(message_id) REFERENCES message(message_id) ON DELETE RESTRICT ON UPDATE RESTRICT -- forbids Updates and Deletes to PK in parent
-) ENGINE = INNODB;
-
+-- ATTACHMENT
 -- View tables
 select * from user;
 select * from channel;
 select * from message;
 
 -- Inserts
-insert into attatchment(file_name, message_id, file_size, file_url)
-    values ('Example_file.jpg', 8, 1064, './home/pictures');
-select * from attatchment;
+insert into attachment(file_name, message_id, file_size, file_url)
+    values ('Example_file.jpg', 3, 1064, './home/pictures');
+select * from attachment;
 
 -- Insert should fail --> Duplicate entry
-insert into attatchment(file_name, message_id, file_size, file_url)
-    values ('Example_file2.jpg', 8, 1064, './home/pictures');
-select * from attatchment;
+insert into attachment(file_name, message_id, file_size, file_url)
+    values ('Example_file2.jpg', 3, 1064, './home/pictures');
+select * from attachment;
 
 -- Deletes
-delete from attatchment where attatchment_id = 1;
-select * from attatchment;
+delete from attachment where attachment_id = 3;
+select * from attachment;
 
 -- Updates
-update attatchment set file_name = 'updatedFile.png' where attatchment_id = 3;
+update attachment set file_name = 'updatedFile.png' where attachment_id = 3;
+
+-- View tables
+select * from user;
+select * from channel;
+select * from message;
+select * from attachment;
+
 #################################################################################################
 /* TRANSACTIONS */
 
+-- Table Read Lock
+-- Demonstrated with user
+START TRANSACTION;
+LOCK TABLES user READ;
+-- SHOW FULL PROCESSLIST;
+    select user_id, user_name from user;
+    -- update user set user_id = 100 where user_name = 'mreilly'; -- Will Fail
+    commit;
+    -- select * from message; -- Will Fail
+    show OPEN tables WHERE In_Use>0;
+UNLOCK TABLES;
 
+-- Table Write Lock
+-- Demonstrated with message
+START TRANSACTION;
+LOCK TABLES user WRITE;
+-- SHOW FULL PROCESSLIST;
+    select user_id, user_name from user;
+    update user set user_id = 100 where user_name = 'mreilly'; -- Pass
+    commit;
+    show OPEN tables WHERE In_Use>0;
+UNLOCK TABLES;
+
+-- Table Read Write Lock
+-- Demonstrated with channel, message
+START TRANSACTION;
+LOCK TABLES channel Write, user READ;
+    select channel_id, channel_name from channel;
+
+    update channel set channel_id = 100 where channel_name = 'Development';
+
+    select * from user;
+
+    commit;
+    Show Open Tables IN SD_DB3 Where In_Use>0;
+    SHOW OPEN TABLES WHERE `Table` LIKE '%T%' AND `Database` LIKE 'USER' AND In_use > 0;
+    SHOW OPEN TABLES WHERE  `Database` LIKE 'VERTEX_DB' AND In_use > 0;
+UNLOCK TABLES;
 
 
 #################################################################################################
@@ -278,17 +329,17 @@ insert into message(channel_id, user_id, message_content)
 select * from message;
 
 
-/* Create attatchment input 
+/* Create attachment input 
 Note -- This probably may change to allow for file inputs
 */
-select * from attatchment;
-insert into attatchment(file_name, message_id, file_size, file_url)
+select * from attachment;
+insert into attachment(file_name, message_id, file_size, file_url)
     values ('Example_file.jpg', 3, 1064, './home/pictures');
-insert into attatchment(file_name, message_id, file_size, file_url)
+insert into attachment(file_name, message_id, file_size, file_url)
     values ('Example_file2.jpg', 6, 10641064, './home/pictures');
-insert into attatchment(file_name, message_id, file_size, file_url)
+insert into attachment(file_name, message_id, file_size, file_url)
     values ('Example_file2.jpg', 1, 10641064, './home/pictures');
-select * from attatchment;
+select * from attachment;
 
 /* Case 1:
 Display user name, display name, associated channels and types for all users
@@ -323,9 +374,9 @@ select usr.display_name, chnl.channel_name, msg.message_content, msg.message_tim
 /* Case 3:
 Display all files sent by all users in all channels
 */
-select usr.user_name, chnl.channel_name, att.file_name from user usr inner join channel chnl on usr.user_id = chnl.user_id inner join message msg on chnl.user_id = msg.user_id inner join attatchment att on msg.message_id = att.message_id;
+select usr.user_name, chnl.channel_name, att.file_name from user usr inner join channel chnl on usr.user_id = chnl.user_id inner join message msg on chnl.user_id = msg.user_id inner join attachment att on msg.message_id = att.message_id;
 
 /* Case 3.1:
 Display all files sent by specific user in all channels
 */
-select usr.user_name, chnl.channel_name, att.file_name from user usr inner join channel chnl on usr.user_id = chnl.user_id inner join message msg on chnl.user_id = msg.user_id inner join attatchment att on msg.message_id = att.message_id where usr.user_id = 1;
+select usr.user_name, chnl.channel_name, att.file_name from user usr inner join channel chnl on usr.user_id = chnl.user_id inner join message msg on chnl.user_id = msg.user_id inner join attachment att on msg.message_id = att.message_id where usr.user_id = 1;
