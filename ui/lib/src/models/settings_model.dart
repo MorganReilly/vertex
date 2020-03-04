@@ -6,8 +6,8 @@ class Settings {
   String audioOutput; // Headphone
   double audioInputSensitivity; // Microphone sensitivity
   String videoInput; // Web cam
-  bool audioInputIsMute; // Microphone mute?
-  bool audioOutputIsMute; // Headphone mute?
+  bool audioInputIsMute; // Microphone mute
+  bool audioOutputIsMute; // Headphone mute
 
   Settings({this.audioInput, this.audioOutput, this.audioInputSensitivity,
       this.videoInput, this.audioInputIsMute, this.audioOutputIsMute});

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:rxdart/rxdart.dart';
 import 'package:vertex_ui/src/utils/validator.dart';
 
+
 class LoginBloc extends Object with Validators implements BaseBloc {
   final _usernameController = BehaviorSubject<String>();
   final _passwordController = BehaviorSubject<String>();

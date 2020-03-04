@@ -10,7 +10,7 @@ import 'package:vertex_ui/src/pages/settings/settings_view_web.dart';
 /// Stateless widget creates the widget from the data
 /// It then passes it back to Stateful, who return the built widget
 class SettingsPage extends StatefulWidget {
-  // Immutable data -- Sort of.. this is the hand over, essentially just a temp ?
+  // Immutable data -- Sort of.. this is the hand over, essentially just a temp
   final String title;
   final Settings settings;
 

@@ -13,6 +13,7 @@ class _TextChatScreenState extends State<TextChatScreen>
   final TextEditingController _textEditingController = TextEditingController();
   bool _isComposing = false;
 
+  /// Dispose of animation when finished
   @override
   void dispose() {
     for (ChatMessage message in _messages) {
@@ -74,47 +75,48 @@ class _TextChatScreenState extends State<TextChatScreen>
   @override
   Widget build(BuildContext context) {
     return Container(
-        child: Column(
-      children: <Widget>[
-        //Heading
-        Container(
-          color: Colors.black26,
-          height: 40,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  "Text Channel Name (General)",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              )
-            ],
+      child: Column(
+        children: <Widget>[
+          //Heading
+          Container(
+            color: Colors.black26,
+            height: 40,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    "Text Channel Name (General)",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                )
+              ],
+            ),
           ),
-        ),
-        Flexible(
-          child: ListView.builder(
-            padding: EdgeInsets.all(8.0),
-            reverse: true,
-            itemBuilder: (_, int index) => _messages[index],
-            itemCount: _messages.length,
+          Flexible(
+            child: ListView.builder(
+              padding: EdgeInsets.all(8.0),
+              reverse: true,
+              itemBuilder: (_, int index) => _messages[index],
+              itemCount: _messages.length,
+            ),
           ),
-        ),
-        Divider(height: 1.0),
-        Container(
-          decoration: BoxDecoration(color: Theme.of(context).cardColor),
-          child: _buildTextComposer(),
-        ),
-      ],
-    ));
+          Divider(height: 1.0),
+          Container(
+            decoration: BoxDecoration(color: Theme.of(context).cardColor),
+            child: _buildTextComposer(),
+          ),
+        ],
+      ),
+    );
   }
 }
 
 /// User name for displaying in message list
-const String _name = "Morgan Reilly"; //TODO: Change this to current user
+const String _name = "User Name"; //TODO: Change this to current user
 
 /// Handles displaying the message in the chat screen
 class ChatMessage extends StatelessWidget {
@@ -142,7 +144,7 @@ class ChatMessage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(dummyData[0].name,
+                  Text(_name[0],
                       style: Theme.of(context).textTheme.subhead),
                   Container(
                     margin: const EdgeInsets.only(top: 5.0),
@@ -150,10 +152,6 @@ class ChatMessage extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-            Container(
-              margin: const EdgeInsets.only(top: 5.0),
-              child: Text(DateTime.now().minute.toString()),
             ),
           ],
         ),

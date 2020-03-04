@@ -35,7 +35,6 @@ class _UIState extends State<UI> {
           title: 'Vertex',
           theme: ThemeData(brightness: Brightness.dark),
           home: SplashScreen(),
-          // TODO: ${username}
           debugShowCheckedModeBanner: false,
           // Remove debug banner
           //Login route
