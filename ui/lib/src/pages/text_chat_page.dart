@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:vertex_ui/src/widgets/custom_gradient.dart';
 import '../models/text_chat_model.dart';
 
 class TextChatScreen extends StatefulWidget {
@@ -9,9 +8,11 @@ class TextChatScreen extends StatefulWidget {
 
 class _TextChatScreenState extends State<TextChatScreen>
     with TickerProviderStateMixin {
+  //Variables
   final List<ChatMessage> _messages = <ChatMessage>[];
   final TextEditingController _textEditingController = TextEditingController();
   bool _isComposing = false;
+  static final _formKey = new GlobalKey<FormState>();
 
   /// Dispose of animation when finished
   @override
@@ -30,11 +31,10 @@ class _TextChatScreenState extends State<TextChatScreen>
         children: <Widget>[
           Flexible(
             child: TextField(
+              key: _formKey,
               controller: _textEditingController,
               onChanged: (String text) {
-                setState(() {
-                  _isComposing = text.length > 0;
-                });
+                setState(() => _isComposing = text.length > 0);
               },
               onSubmitted: _handleSubmitted,
               decoration: InputDecoration.collapsed(hintText: "Send a message"),
@@ -157,5 +157,5 @@ class ChatMessage extends StatelessWidget {
         ),
       ),
     );
-  }
-}
+  } //End builder
+} //End class

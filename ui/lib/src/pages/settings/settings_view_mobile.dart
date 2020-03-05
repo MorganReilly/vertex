@@ -1,4 +1,5 @@
 import 'package:dynamic_theme/dynamic_theme.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vertex_ui/src/pages/settings/app_info.dart';
@@ -24,6 +25,8 @@ class _SettingsViewMobilePortrait extends State<SettingsViewMobilePortrait> {
   String _videoInput;
   bool _audioInputIsMute = false;
   bool _audioOutputIsMute = false;
+  bool _theme; // Light --> true /  Dark --> false
+  String _loggedInUser;
 
   List<String> _defaultAudioInput = [
     'None Selected',
@@ -43,6 +46,8 @@ class _SettingsViewMobilePortrait extends State<SettingsViewMobilePortrait> {
     'External Webcam'
   ];
 
+  List<bool> _themeIsSelected = [true, false];
+
   /// -- Init State --
   @override
   void initState() {
@@ -54,6 +59,14 @@ class _SettingsViewMobilePortrait extends State<SettingsViewMobilePortrait> {
   @override
   void dispose() {
     super.dispose();
+  }
+
+  // TODO: Nothing to do with brightness.. should be theme
+  void changeBrightness() {
+    DynamicTheme.of(context).setBrightness(
+        Theme.of(context).brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark);
   }
 
   // https://codingwithjoe.com/flutter-saving-and-restoring-with-sharedpreferences/
@@ -83,6 +96,8 @@ class _SettingsViewMobilePortrait extends State<SettingsViewMobilePortrait> {
       _videoInput = (sharedPrefs.getString('videoInput') ?? 'None Selected');
       _audioInputIsMute = (sharedPrefs.getBool('audioInputIsMute') ?? false);
       _audioOutputIsMute = (sharedPrefs.getBool('audioOutputIsMute') ?? false);
+      // User logged in
+      _loggedInUser = sharedPrefs.getString('username') ?? "No User Logged In";
     });
   }
 
@@ -206,25 +221,24 @@ class _SettingsViewMobilePortrait extends State<SettingsViewMobilePortrait> {
   /// Slider Display
   Widget get audioInputSensitivitySlider {
     return Container(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          Slider(
-            activeColor: Colors.white,
-            min: 0.0,
-            max: 100.0,
-            onChanged: (value) {
-              setState(() {
-                _audioInputSensitivity = value;
-              });
-              save('audioInputSensitivity', value);
-            },
-            value: _audioInputSensitivity,
-          ),
-        ],
-      ),
-    );
+        child: Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: <Widget>[
+        Slider(
+          activeColor: Colors.white,
+          min: 0.0,
+          max: 100.0,
+          onChanged: (value) {
+            setState(() {
+              _audioInputSensitivity = value;
+            });
+            save('audioInputSensitivity', value);
+          },
+          value: _audioInputSensitivity,
+        ),
+      ],
+    ));
   } //End widget
 
   /// -- WebCam Input --
@@ -315,6 +329,69 @@ class _SettingsViewMobilePortrait extends State<SettingsViewMobilePortrait> {
     );
   }
 
+  /// -- Audio Card--
+  /// Text Display
+  Widget get themeCard {
+    return Container(
+      child: Card(
+        elevation: 0,
+        color: Colors.transparent,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: <Widget>[
+            Text("Theme"),
+            themeToggle,
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// -- Mute Headphone --
+  /// ToggleButton Widget
+  Widget get themeToggle {
+    return Column(
+      children: <Widget>[
+        Container(
+            padding: EdgeInsets.symmetric(
+              vertical: 16.0,
+              horizontal: 16.0,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: <Widget>[
+                ToggleButtons(
+                  children: <Widget>[
+                    Icon(Icons.do_not_disturb_alt),
+                    Icon(Icons.check),
+                  ],
+//                  // Need mutually exclusive check
+                  onPressed: (int index) {
+                    setState(() {
+                      for (int i = 0; i < _themeIsSelected.length; i++) {
+                        if (i == index) {
+                          _themeIsSelected[i] = true;
+                          changeBrightness();
+//                          brightness: Brightness.dark,
+                        } else {
+                          _themeIsSelected[i] = false;
+                          changeBrightness();
+                        }
+//                        _audioOutputIsMute = _audioOutputIsSelected[i];
+//                        save('audioOutputIsMute', _audioOutputIsSelected[i]);
+//                        save('audioOutputIsSelected', _audioOutputIsSelected[i]);
+                      }
+                    });
+                  },
+                  isSelected: _themeIsSelected,
+                ),
+              ],
+            )),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -325,8 +402,7 @@ class _SettingsViewMobilePortrait extends State<SettingsViewMobilePortrait> {
           Container(
             height: 100,
             color: Colors.black26,
-            //TODO: Hock in with currently logged user
-            child: UserDetails(userName: "User account Name"),
+            child: UserDetails(userName: _loggedInUser),
           ),
           SizedBox(height: 20.0),
           Container(
@@ -351,14 +427,13 @@ class _SettingsViewMobilePortrait extends State<SettingsViewMobilePortrait> {
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Container(
-                      child: Column(
-                        children: <Widget>[
-                          //Device info
-                          DeviceInfo(),
-                          AppInfo(),
-                        ],
-                      ),
-                    ),
+                        child: kIsWeb
+                            ? new Text("")
+                            : Column(children: <Widget>[
+                                //Device info
+                                DeviceInfo(),
+                                AppInfo(),
+                              ])),
                   )
                 ],
               ),
