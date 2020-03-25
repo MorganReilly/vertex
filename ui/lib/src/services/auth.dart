@@ -1,4 +1,3 @@
-
 import 'client_stubs/lib/api.dart';
 
 //Enum
@@ -15,12 +14,13 @@ abstract class AuthStateListener {
 /// Ref: https://stackoverflow.com/questions/12649573/how-do-you-build-a-singleton-in-dart
 /// Observer/Subscriber Pattern
 
-
 class AuthStateProvider {
   //Variables
   static final AuthStateProvider _instance = new AuthStateProvider.internal();
+
   // Factory Constructor
   List<AuthStateListener> _subscribers;
+
   factory AuthStateProvider() => _instance;
 
   AuthStateProvider.internal() {

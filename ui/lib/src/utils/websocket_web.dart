@@ -32,6 +32,7 @@ class SimpleWebSocket {
     }
   }
 
+  // use this to send data back to the server
   send(data) {
     if (_socket != null && _socket.readyState == WebSocket.OPEN) {
       _socket.send(data);

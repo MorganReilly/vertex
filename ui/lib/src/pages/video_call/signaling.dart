@@ -261,12 +261,12 @@ class Signaling {
   }
 
   void connect() async {
-    var url = 'wss://$_host:$_port';
-    _socket = SimpleWebSocket(url);
+    var url = 'wss://$_host:$_port'; // url of websocket --> ws, not wss
+    _socket = SimpleWebSocket(url); // class with simple web socket
 
     print('connect to $url');
 
-    _socket.onOpen = () {
+    _socket.onOpen = () { // when connection is open
       print('onOpen');
       this?.onStateChange(SignalingState.ConnectionOpen);
       _send('new', {
@@ -276,6 +276,7 @@ class Signaling {
       });
     };
 
+    // listening for data to come back
     _socket.onMessage = (message) {
       print('Recivied data: ' + message);
       JsonDecoder decoder = new JsonDecoder();

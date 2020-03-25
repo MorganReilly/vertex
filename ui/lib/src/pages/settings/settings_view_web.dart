@@ -1,4 +1,3 @@
-import 'package:dynamic_theme/dynamic_theme.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,7 +24,6 @@ class _SettingsViewWeb extends State<SettingsViewWeb> {
   // Values just needed to be initialised to remove errors throw
   bool _audioInputIsMute = false;
   bool _audioOutputIsMute = false;
-  bool _theme; // Light --> true /  Dark --> false
   String _loggedInUser;
 
   List<String> _defaultAudioInput = [
@@ -46,27 +44,18 @@ class _SettingsViewWeb extends State<SettingsViewWeb> {
     'External Webcam'
   ];
 
-  List<bool> _themeIsSelected = [true, false];
 
   /// -- Init State --
   @override
   void initState() {
     super.initState();
-    restore();
+    restore(); // FutureBuilder
   }
 
   /// -- Dispose --
   @override
   void dispose() {
     super.dispose();
-  }
-
-  // TODO: Nothing to do with brightness.. should be theme
-  void changeBrightness() {
-    DynamicTheme.of(context).setBrightness(
-        Theme.of(context).brightness == Brightness.dark
-            ? Brightness.light
-            : Brightness.dark);
   }
 
   // https://codingwithjoe.com/flutter-saving-and-restoring-with-sharedpreferences/
@@ -124,7 +113,7 @@ class _SettingsViewWeb extends State<SettingsViewWeb> {
               ),
               onChanged: (String value) {
                 setState(() {
-                    _audioInput = value;
+                  _audioInput = value;
                 });
                 // Save as key value pair
                 save('audioInput', value);
@@ -221,24 +210,25 @@ class _SettingsViewWeb extends State<SettingsViewWeb> {
   /// Slider Display
   Widget get audioInputSensitivitySlider {
     return Container(
-        child: Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: <Widget>[
-        Slider(
-          activeColor: Colors.white,
-          min: 0.0,
-          max: 100.0,
-          onChanged: (value) {
-            setState(() {
-              _audioInputSensitivity = value;
-            });
-            save('audioInputSensitivity', value);
-          },
-          value: _audioInputSensitivity,
-        ),
-      ],
-    ));
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          Slider(
+            activeColor: Colors.white,
+            min: 0.0,
+            max: 100.0,
+            onChanged: (value) {
+              setState(() {
+                _audioInputSensitivity = value;
+              });
+              save('audioInputSensitivity', value);
+            },
+            value: _audioInputSensitivity,
+          ),
+        ],
+      ),
+    );
   } //End widget
 
   /// -- WebCam Input --
@@ -329,21 +319,6 @@ class _SettingsViewWeb extends State<SettingsViewWeb> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        key: _scaffoldKey,
-        appBar: AppBar(title: Text("Settings")),
-        body: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 70, vertical: 60),
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 1200),
-            child: settings(),
-          ),
-        ));
-  } //End builder
-
   Widget appInfo() {
     return Row(
       children: <Widget>[],
@@ -415,4 +390,19 @@ class _SettingsViewWeb extends State<SettingsViewWeb> {
         } //End builder
         );
   } //End widget
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        key: _scaffoldKey,
+        appBar: AppBar(title: Text("Settings")),
+        body: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 70, vertical: 60),
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: 1200),
+            child: settings(),
+          ),
+        ));
+  } //End builder
 } //End class

@@ -57,6 +57,7 @@ CREATE TABLE message
 ) ENGINE = INNODB;
 
 /* -- ATTACHMENT SCHEMA -- */
+-- NO LONGER RELEVANT
 -- 1:1 Relationship with Message
 drop table if EXISTS attachment;
 CREATE TABLE attachment

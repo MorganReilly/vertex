@@ -68,7 +68,7 @@ class AuthApi {
       // allow the application store details on a user so it can be used
       // later on to make requests
       user = apiClient.deserialize(_decodeBodyBytes(response), 'User') as User;
-      // Store currently logged in user information
+      // Store currently logged in user information -- Instance of shared preferences
       userDetails.setString('username', user.username);
       userDetails.setInt('id', user.id);
       print(user);
