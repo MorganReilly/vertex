@@ -1,117 +1,73 @@
 import 'dart:html';
 
+/// G00303598 -- Morgan Reilly
+/// Text Chat Page
+/// TODO: Link with Database
+/// TODO: Link with user logged in
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vertex_ui/src/utils/websocket.dart';
+import 'package:vertex_ui/src/services/client_stubs/lib/api.dart';
+import '../../utils/device_info.dart'
+    if (dart.library.js) '../../utils/device_info_web.dart';
+import '../../utils/websocket.dart'
+    if (dart.library.js) '../../utils/websocket_web.dart';
+import 'dart:async';
+import 'dart:io';
 
-class TextChat extends StatelessWidget {
-  final String userId;
+/// MessageScreen -> Stateful Widget
+class MessageScreen extends StatefulWidget {
+  final int id; // Message id
+  final String content; // Content of message
+  final int timestamp; // Unix epoch time-stamp of message
 
-  //TODO: Other variables in here..
-
-  TextChat({Key key, this.userId}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return new Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Vertex Chat',
-        ),
-        centerTitle: true,
-      ),
-      body: TextChatScreen(
-        userId: userId,
-      ),
-    );
-  }
-}
-
-class TextChatScreen extends StatefulWidget {
-  final String userId;
-
-//  final String channelId;
-  TextChatScreen({Key key, this.userId}) : super(key: key);
+  // Stateful Widget Constructor
+  MessageScreen(
+      {Key key,
+      this.id,
+      Channel channel,
+      User author,
+      this.content,
+      this.timestamp})
+      : super(key: key);
 
   @override
-  State createState() => TextChatScreenState(userId: userId);
+  State createState() => MessageScreenState();
 }
 
-class TextChatScreenState extends State<TextChatScreen>
+/// Message Screen State -> State<MessageScreen>
+class MessageScreenState extends State<MessageScreen>
     with TickerProviderStateMixin {
-  String userId;
-  String id;
+  // Message Screen State Constructor
+  MessageScreenState({Key key, this.id, this.content, this.timestamp});
 
-  TextChatScreenState({Key key, this.userId});
+  // Variables to match database
+  int id; // Message id
+  String content; // Content of message
+  int timestamp; // Unix epoch time-stamp of message
 
-  // Variable
-  List<ChatMessage> _messages = <ChatMessage>[];
-  String chatId; // Group chat id / channel id
+  // Internal Message Variables
+  List<ChatMessage> messageList = <ChatMessage>[];
   SharedPreferences preferences;
+  bool isComposing = false;
 
-  bool isLoading;
-  bool isShowSticker;
-  bool _isComposing = false;
-  static final _formKey = new GlobalKey<FormState>();
-
-//  File imgFile; // May use ?
-//  String imgUrl; // May use?
-
+  // Message Controllers
   final TextEditingController textEditingController =
-  new TextEditingController();
+      new TextEditingController();
   final ScrollController scrollController = new ScrollController();
   final FocusNode focusNode = new FocusNode();
-
-  WebSocketTextMessage wbtm = new WebSocketTextMessage("ws://localhost:8765");
-
-//  //Variables
-//  final List<ChatMessage> _messages = <ChatMessage>[];
-//  final TextEditingController _textEditingController = TextEditingController();
-//  bool _isComposing = false;
-//  static final _formKey = new GlobalKey<FormState>();
-//  WebSocketTextMessage wbtm = new WebSocketTextMessage("ws://localhost:8765");
 
   @override
   void initState() {
     super.initState();
     print("text_chat_page.initState()");
-    wbtm.connect();
-    print(wbtm._url);
-
-    chatId = '';
-
-    isLoading = false;
-    readLocal();
-//    imgUrl = '';
-  }
-
-  readLocal() async {
-    preferences = await SharedPreferences.getInstance();
-    id = preferences.getString('id') ?? '';
-    if (id.hashCode <= userId.hashCode)
-      chatId = '$id-$userId';
-    else
-      chatId = '$userId-$id';
-
-    // TODO: READ FROM DB HERE
-    setState(() {});
-  }
-
-  void onSendMessage(String content, int type) {
-    if (content.trim() != '') {
-      textEditingController.clear(); // Clear the input box
-
-      // TODO: Send message to server from here?
-
-    } else {
-      print("Noting to send");
-    }
+    print(id.toString()); // Check id
   }
 
   /// Dispose of animation when finished
   @override
   void dispose() {
-    for (ChatMessage message in _messages) {
+    for (ChatMessage message in messageList) {
       message.animationController.dispose();
     }
     super.dispose();
@@ -125,12 +81,11 @@ class TextChatScreenState extends State<TextChatScreen>
         children: <Widget>[
           Flexible(
             child: TextField(
-              key: _formKey,
               controller: textEditingController,
               onChanged: (String text) {
-                setState(() => _isComposing = text.length > 0);
+                setState(() => isComposing = text.length > 0);
               },
-              onSubmitted: _handleSubmitted,
+              onSubmitted: handleSubmitted,
               decoration: InputDecoration.collapsed(hintText: "Send a message"),
             ),
           ),
@@ -138,8 +93,8 @@ class TextChatScreenState extends State<TextChatScreen>
             margin: EdgeInsets.symmetric(horizontal: 4.0),
             child: IconButton(
               icon: Icon(Icons.send),
-              onPressed: _isComposing
-                  ? () => _handleSubmitted(textEditingController.text)
+              onPressed: isComposing
+                  ? () => handleSubmitted(textEditingController.text)
                   : null,
             ),
           ),
@@ -148,23 +103,22 @@ class TextChatScreenState extends State<TextChatScreen>
     );
   }
 
-  void _handleSubmitted(String text) {
+  void handleSubmitted(String text) {
     print("handleSubmitted()");
     textEditingController.clear();
     setState(() {
-      _isComposing = false;
+      isComposing = false;
     });
     ChatMessage message = ChatMessage(
-      text: text,
+      content: text,
       animationController: AnimationController(
         duration: Duration(milliseconds: 400),
         vsync: this,
       ),
     );
     setState(() {
-      _messages.insert(0, message);
+      messageList.insert(0, message);
     });
-    wbtm.send(message); // TODO: Look at serialising the message?
     message.animationController.forward();
   }
 
@@ -196,15 +150,13 @@ class TextChatScreenState extends State<TextChatScreen>
             child: ListView.builder(
               padding: EdgeInsets.all(8.0),
               reverse: true,
-              itemBuilder: (_, int index) => _messages[index],
-              itemCount: _messages.length,
+              itemBuilder: (_, int index) => messageList[index],
+              itemCount: messageList.length,
             ),
           ),
           Divider(height: 1.0),
           Container(
-            decoration: BoxDecoration(color: Theme
-                .of(context)
-                .cardColor),
+            decoration: BoxDecoration(color: Theme.of(context).cardColor),
             child: _buildTextComposer(),
           ),
         ],
@@ -213,28 +165,29 @@ class TextChatScreenState extends State<TextChatScreen>
   }
 }
 
-// function to call api to get messages
-
-// get websocket open with simplewebsocket -- different to original one 1
-// open to milton
-// on open print hello
-// check logs of server for connection
-
-/// User name for displaying in message list
-const String _name = "User Name"; //TODO: Change this to current user
-
 /// Handles displaying the message in the chat screen
 class ChatMessage extends StatelessWidget {
-  ChatMessage({this.text, this.animationController});
-
-  final String text;
+  final int id; // Message id
+  final String content; // Content of message
+  final int timestamp; // Unix epoch time-stamp of message
   final AnimationController animationController;
+
+  ChatMessage(
+      {Key key,
+      this.id,
+      Channel channel,
+      User author,
+      this.content,
+      this.timestamp,
+      this.animationController});
+
+  get author => null;
 
   @override
   Widget build(BuildContext context) {
     return SizeTransition(
       sizeFactor:
-      CurvedAnimation(parent: animationController, curve: Curves.easeOut),
+          CurvedAnimation(parent: animationController, curve: Curves.easeOut),
       axisAlignment: 0.0,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 10.0),
@@ -243,19 +196,17 @@ class ChatMessage extends StatelessWidget {
           children: <Widget>[
             Container(
               margin: const EdgeInsets.only(right: 16.0),
-              child: CircleAvatar(child: Text(_name[0])),
+              child: CircleAvatar(child: Text(author.toString())),
             ),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(_name[0], style: Theme
-                      .of(context)
-                      .textTheme
-                      .subhead),
+                  Text(author.toString(),
+                      style: Theme.of(context).textTheme.subhead),
                   Container(
                     margin: const EdgeInsets.only(top: 5.0),
-                    child: Text(text), // Body of message to display
+                    child: Text(content), // Body of message to display
                   ),
                 ],
               ),
@@ -266,49 +217,3 @@ class ChatMessage extends StatelessWidget {
     );
   } //End builder
 } //End class
-
-/// WebSocketTextMessage
-/// This class handles the websocket to use
-/// for the text messaging side of the application.
-class WebSocketTextMessage {
-  String _url;
-  var _socket;
-  OnOpenCallback onOpen;
-  OnMessageCallback onMessage;
-  OnCloseCallback onClose;
-
-  WebSocketTextMessage(this._url);
-
-  connect() async {
-    try {
-      _socket = WebSocket(_url);
-      _socket.onOpen.listen((e) {
-        this?.onOpen();
-      });
-
-      _socket.onMessage.listen((e) {
-        this?.onMessage(e.data);
-      });
-
-      _socket.onClose.listen((e) {
-        this?.onClose(e.code, e.reason);
-      });
-    } catch (e) {
-      this?.onClose(e.code, e.reason);
-    }
-  }
-
-  // use this to send data back to the server
-  send(data) {
-    if (_socket != null && _socket.readyState == WebSocket.OPEN) {
-      _socket.send(data);
-      print('send: $data');
-    } else {
-      print('WebSocket not connected, message $data not sent');
-    }
-  }
-
-  close() {
-    _socket.close();
-  }
-}
